@@ -1,15 +1,29 @@
+import os
+import io
 import torch
 import torchvision.transforms as transforms
 from torchvision import models
 from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
 from PIL import Image
 import requests
-import io
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
 
-# Chargement du modèle ResNet pré-entrainé
+# Configuration de la base de données
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://user:password@db:5432/mydatabase')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Modèle de la base de données pour enregistrer les prédictions
+class Prediction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    image_name = db.Column(db.String(120), nullable=False)
+    predicted_class = db.Column(db.String(120), nullable=False)
+    confidence_score = db.Column(db.Float, nullable=False)
+
+# Chargement du modèle ResNet pré-entraîné
 model = models.resnet50(pretrained=True)
 model.eval()
 
@@ -51,6 +65,16 @@ def predict():
 
         # Obtenir la classe prédite
         predicted_class = imagenet_classes[predicted_idx.item()]
+
+        # Enregistrer la prédiction dans la base
+        prediction = Prediction(
+            image_name=file.filename,
+            predicted_class=predicted_class,
+            confidence_score=confidence_score.item()
+        )
+        db.session.add(prediction)
+        db.session.commit()
+
         response = {
             "confidence_score": confidence_score.item(),
             "predicted_class": predicted_class
@@ -59,6 +83,11 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Initialisation automatique de la base
+with app.app_context():
+    db.create_all()
+
 
 # Point d'entrée principal
 if __name__ == "__main__":

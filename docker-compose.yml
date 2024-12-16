@@ -1,12 +1,30 @@
 version: '3.8'
 
 services:
-  flask_app:
-    build: .
+  api:
+    build:
+      context: .
+    container_name: flask-api
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/mydatabase  # URL de la base directement ici
     ports:
       - "5000:5000"
+    depends_on:
+      - db
     volumes:
-      - .:/app
+      - .:/app  # Monte le code local dans le conteneur pour développement
+
+  db:
+    image: postgres:15  # Utilise l'image officielle PostgreSQL
+    container_name: postgres-db
     environment:
-      - FLASK_ENV=production
-    container_name: flask_app_container
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"  # Expose la base sur le port 5432
+    volumes:
+      - db_data:/var/lib/postgresql/data  # Stocke les données de manière persistante
+
+volumes:
+  db_data:

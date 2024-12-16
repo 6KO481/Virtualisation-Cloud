@@ -1,17 +1,17 @@
-# Utilisation de l'image officielle de Python
-FROM python:3.9
+# Utilisation de l'image Python
+FROM python:3.9-slim
 
-# Définition du répertoire de travail
+# Répertoire de travail
 WORKDIR /app
 
-# Copie des fichiers de l'application dans le conteneur
-COPY . /app
+# Copier les dépendances
+COPY requirements.txt requirements.txt
 
-# Installation des dépendances via requirements.txt
+# Installer les dépendances
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Exposition du port Flask
-EXPOSE 5000
+# Copier le code dans le conteneur
+COPY . .
 
-# Commande pour démarrer l'application Flask
+# Commande de démarrage
 CMD ["python", "app.py"]
